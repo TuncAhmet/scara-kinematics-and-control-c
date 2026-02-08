@@ -1,3 +1,5 @@
+[![CI (Windows)](https://github.com/TuncAhmet/scara-kinematics-and-control-c/actions/workflows/makefile.yml/badge.svg)](https://github.com/TuncAhmet/scara-kinematics-and-control-c/actions/workflows/makefile.yml)
+
 # SCARA Robot Kinematics & Closed-Loop Control
 
 A C implementation of SCARA robot forward/inverse kinematics using Denavit-Hartenberg parameters, PID-based motion control with trajectory generation, real-time simulation, and a Python visualization dashboard.
