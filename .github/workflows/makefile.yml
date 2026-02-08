@@ -1,0 +1,54 @@
+name: CI (Windows)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  c-build-and-test:
+    name: C build + Unity tests (Make)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Make + GCC for Windows runner (MSYS2 / MinGW64)
+      - name: Setup MSYS2 (MinGW64)
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+
+      # Run make inside MSYS2 shell
+      - name: Build
+        shell: msys2 {0}
+        run: make
+
+      - name: Test
+        shell: msys2 {0}
+        run: make test
+
+  python-ui-smoke:
+    name: Python UI smoke check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install UI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python_ui/requirements.txt
+
+      - name: Syntax/import smoke check
+        run: |
+          python -m compileall python_ui
