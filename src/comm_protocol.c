@@ -43,12 +43,19 @@ static bool parse_int(const char* json, const char* key, int* value) {
 
 static bool parse_string(const char* json, const char* key, char* value, int max_len) {
     char search[64];
-    snprintf(search, sizeof(search), "\"%s\":\"", key);
+    snprintf(search, sizeof(search), "\"%s\":", key);
     
     const char* pos = strstr(json, search);
     if (!pos) return false;
     
     pos += strlen(search);
+    /* Skip whitespace after colon */
+    while (*pos == ' ' || *pos == '\t') pos++;
+    
+    /* Expect opening quote */
+    if (*pos != '"') return false;
+    pos++;
+    
     int i = 0;
     while (*pos && *pos != '"' && i < max_len - 1) {
         value[i++] = *pos++;
@@ -177,29 +184,47 @@ bool comm_server_receive(CommServer* server, Command* cmd) {
 #ifdef _WIN32
     bytes_received = recv(server->client_socket, server->recv_buffer, 
                           COMM_MAX_BUFFER_SIZE - 1, 0);
-#else
-    bytes_received = recv(server->client_socket, server->recv_buffer,
-                          COMM_MAX_BUFFER_SIZE - 1, MSG_DONTWAIT);
-#endif
     
-    if (bytes_received <= 0) {
-#ifdef _WIN32
+    if (bytes_received == SOCKET_ERROR) {
         int err = WSAGetLastError();
         if (err != WSAEWOULDBLOCK) {
+            printf("Recv socket error: %d (disconnecting)\n", err);
             comm_server_disconnect_client(server);
         }
-#else
-        if (bytes_received == 0) {
-            comm_server_disconnect_client(server);
-        }
-#endif
+        /* WSAEWOULDBLOCK just means no data available - not an error */
         return false;
     }
     
+    if (bytes_received == 0) {
+        /* Graceful close by client */
+        printf("Client closed connection gracefully\n");
+        comm_server_disconnect_client(server);
+        return false;
+    }
+#else
+    bytes_received = recv(server->client_socket, server->recv_buffer,
+                          COMM_MAX_BUFFER_SIZE - 1, MSG_DONTWAIT);
+    
+    if (bytes_received < 0) {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            comm_server_disconnect_client(server);
+        }
+        return false;
+    }
+    
+    if (bytes_received == 0) {
+        comm_server_disconnect_client(server);
+        return false;
+    }
+#endif
+    
     server->recv_buffer[bytes_received] = '\0';
+    printf("DEBUG: Received %d bytes: %s\n", bytes_received, server->recv_buffer);
     
     /* Parse command */
-    return comm_parse_command(server->recv_buffer, cmd);
+    bool result = comm_parse_command(server->recv_buffer, cmd);
+    printf("DEBUG: Parse result=%d, cmd_type=%d\n", result, cmd->type);
+    return result;
 }
 
 bool comm_parse_command(const char* json, Command* cmd) {
