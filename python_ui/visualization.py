@@ -204,6 +204,13 @@ class Dashboard:
         self.font_title = pygame.font.SysFont('Consolas', 18, bold=True)
         self.font_label = pygame.font.SysFont('Consolas', 14)
         self.font_value = pygame.font.SysFont('Consolas', 16, bold=True)
+        self.font_table = pygame.font.SysFont('Consolas', 11)
+        self.font_table_header = pygame.font.SysFont('Consolas', 11, bold=True)
+        
+        # SCARA D-H parameters (constant)
+        self.L1 = 0.30  # Link 1 length
+        self.L2 = 0.25  # Link 2 length
+        self.d1 = 0.40  # Base height
         
         # Data
         self.joints: Dict[str, float] = {"theta1": 0, "theta2": 0, "d3": 0, "theta4": 0}
@@ -308,3 +315,79 @@ class Dashboard:
                 val_text = self.font_value.render(f"{val*1000:+7.1f} mm", True, (255, 255, 255))
                 self.surface.blit(val_text, (x + 65, y))
             y += line_height
+        
+        y += 10
+        
+        # D-H Parameters Table
+        self._draw_dh_table(x, y)
+    
+    def _draw_dh_table(self, x: int, y: int):
+        """Draw D-H parameters table"""
+        # Title
+        title = self.font_title.render("D-H Parameters", True, (180, 180, 180))
+        self.surface.blit(title, (x, y))
+        y += 22
+        
+        # Table settings
+        col_widths = [35, 45, 45, 50, 55]  # Joint, a, α, d, θ
+        row_height = 16
+        var_color = (100, 200, 255)  # Cyan for variable parameters
+        
+        # Header row
+        headers = ["Joint", "a(m)", "α(rad)", "d(m)", "θ(rad)"]
+        header_x = x
+        for i, header in enumerate(headers):
+            text = self.font_table_header.render(header, True, (180, 180, 180))
+            self.surface.blit(text, (header_x, y))
+            header_x += col_widths[i]
+        y += row_height + 2
+        
+        # Draw separator line
+        pygame.draw.line(self.surface, (80, 85, 90), (x, y), (x + sum(col_widths), y), 1)
+        y += 3
+        
+        # Get current joint values
+        theta1 = self.joints.get("theta1", 0)
+        theta2 = self.joints.get("theta2", 0)
+        d3 = self.joints.get("d3", 0)
+        theta4 = self.joints.get("theta4", 0)
+        
+        # D-H table data: [joint_name, a, alpha, d, theta, d_is_var, theta_is_var]
+        dh_rows = [
+            ("1", "0", "0", f"{self.d1:.2f}", f"{theta1:+.3f}", False, True),
+            ("2", f"{self.L1:.2f}", "0", "0", f"{theta2:+.3f}", False, True),
+            ("3", f"{self.L2:.2f}", "0", f"{d3:.3f}", "0", True, False),
+            ("4", "0", "0", "0", f"{theta4:+.3f}", False, True),
+        ]
+        
+        for row in dh_rows:
+            joint, a, alpha, d, theta, d_var, theta_var = row
+            row_x = x
+            
+            # Joint number
+            text = self.font_table.render(joint, True, COLOR_TEXT)
+            self.surface.blit(text, (row_x + 8, y))
+            row_x += col_widths[0]
+            
+            # a parameter
+            text = self.font_table.render(a, True, COLOR_TEXT)
+            self.surface.blit(text, (row_x, y))
+            row_x += col_widths[1]
+            
+            # alpha parameter
+            text = self.font_table.render(alpha, True, COLOR_TEXT)
+            self.surface.blit(text, (row_x, y))
+            row_x += col_widths[2]
+            
+            # d parameter (highlight if variable)
+            color = var_color if d_var else COLOR_TEXT
+            text = self.font_table.render(d, True, color)
+            self.surface.blit(text, (row_x, y))
+            row_x += col_widths[3]
+            
+            # theta parameter (highlight if variable)
+            color = var_color if theta_var else COLOR_TEXT
+            text = self.font_table.render(theta, True, color)
+            self.surface.blit(text, (row_x, y))
+            
+            y += row_height

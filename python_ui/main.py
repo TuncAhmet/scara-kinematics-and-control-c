@@ -14,13 +14,13 @@ from visualization import SCARAVisualization, Dashboard, COLOR_BACKGROUND, COLOR
 
 # Window configuration
 WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 700
+WINDOW_HEIGHT = 800
 FPS = 60
 
 # Layout
-VIS_AREA = pygame.Rect(0, 0, 750, 700)
-DASHBOARD_AREA = pygame.Rect(750, 0, 250, 450)
-INPUT_AREA = pygame.Rect(750, 450, 250, 250)
+VIS_AREA = pygame.Rect(0, 0, 750, 800)
+DASHBOARD_AREA = pygame.Rect(750, 0, 450, 550)
+INPUT_AREA = pygame.Rect(750, 550, 450, 250)
 
 # SCARA configuration (match C code)
 SCARA_L1 = 0.30
