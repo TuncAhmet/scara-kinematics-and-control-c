@@ -235,6 +235,60 @@ void test_joint_limit_clamping(void) {
     TEST_ASSERT_TRUE(success);
 }
 
+/**
+ * @brief Regression test for Issue #1: End-effector drift after reaching target
+ * 
+ * Verifies that the robot holds its position after reaching the target.
+ * The robot should NOT drift over time once fully settled.
+ */
+void test_position_holding_after_reached(void) {
+    /* Set a reachable target */
+    JointState target = {0.5, -0.3, 0.05, 0.2};
+    
+    simulation_set_target_joints(&sim, &target);
+    
+    /* Run until target is reached */
+    int max_steps = 2500;
+    for (int i = 0; i < max_steps; i++) {
+        simulation_step(&sim);
+        if (sim.mode == MODE_REACHED) {
+            break;
+        }
+    }
+    
+    TEST_ASSERT_EQUAL_INT(MODE_REACHED, sim.mode);
+    
+    /* Let the system fully settle for 2 seconds (1000 steps at 500 Hz) */
+    for (int i = 0; i < 1000; i++) {
+        simulation_step(&sim);
+    }
+    
+    /* Record position after settling */
+    JointState pos_settled = simulation_get_joints(&sim);
+    
+    /* Continue running simulation for 5 more seconds (2500 steps at 500 Hz) */
+    /* This tests if drift occurs after full settling */
+    for (int i = 0; i < 2500; i++) {
+        simulation_step(&sim);
+    }
+    
+    /* Get position after additional hold period */
+    JointState pos_after_hold = simulation_get_joints(&sim);
+    
+    /* Position should not have drifted from the settled position */
+    /* Using tight tolerance: 0.001 rad for angles, 0.0005 m for prismatic */
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, pos_settled.theta1, pos_after_hold.theta1);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, pos_settled.theta2, pos_after_hold.theta2);
+    TEST_ASSERT_DOUBLE_WITHIN(0.0005, pos_settled.d3, pos_after_hold.d3);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, pos_settled.theta4, pos_after_hold.theta4);
+    
+    /* Also verify we're close to the original target after all this time */
+    TEST_ASSERT_DOUBLE_WITHIN(0.02, target.theta1, pos_after_hold.theta1);
+    TEST_ASSERT_DOUBLE_WITHIN(0.02, target.theta2, pos_after_hold.theta2);
+    TEST_ASSERT_DOUBLE_WITHIN(0.005, target.d3, pos_after_hold.d3);
+    TEST_ASSERT_DOUBLE_WITHIN(0.02, target.theta4, pos_after_hold.theta4);
+}
+
 /* ============================================================================
  * Main
  * ========================================================================== */
@@ -260,6 +314,7 @@ int main(void) {
     
     RUN_TEST(test_unreachable_detection);
     RUN_TEST(test_joint_limit_clamping);
+    RUN_TEST(test_position_holding_after_reached);
     
     return UnityEnd();
 }

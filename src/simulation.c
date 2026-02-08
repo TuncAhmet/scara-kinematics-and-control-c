@@ -118,8 +118,16 @@ void simulation_step(SimulationState* sim) {
     /* Get current plant state */
     JointState current_joints = plant_get_position(&sim->plant);
     
-    /* Initialize setpoint to current position (for IDLE mode) */
-    JointState setpoint = current_joints;
+    /* Initialize setpoint based on mode */
+    JointState setpoint;
+    
+    if (sim->mode == MODE_REACHED && sim->has_target) {
+        /* Hold at target position to prevent drift */
+        setpoint = sim->target_joints;
+    } else {
+        /* Default to current position (for IDLE/ERROR modes) */
+        setpoint = current_joints;
+    }
     
     if (sim->mode == MODE_MOVING && sim->trajectory.is_valid) {
         /* Advance trajectory time */
