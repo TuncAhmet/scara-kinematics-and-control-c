@@ -12,11 +12,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Make + GCC for Windows runner (MSYS2 / MinGW64)
-      - name: Setup MSYS2 (MinGW64)
-      - uses: msys2/setup-msys2@v2
+      - name: Setup MSYS2 (MinGW64 toolchain)
+        uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
@@ -24,25 +24,32 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-make
 
-      # Run make inside MSYS2 shell
       - name: Build
-        shell: msys2 {0}
-        run: make
+        shell: cmd
+        run: |
+          set PATH=C:\msys64\mingw64\bin;%PATH%
+          mingw32-make SHELL=cmd.exe
 
       - name: Test
-        shell: msys2 {0}
-        run: make test
+        shell: cmd
+        run: |
+          set PATH=C:\msys64\mingw64\bin;%PATH%
+          mingw32-make test SHELL=cmd.exe
 
   python-ui-smoke:
     name: Python UI smoke check
     runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: python_ui/requirements.txt
 
       - name: Install UI dependencies
         run: |
