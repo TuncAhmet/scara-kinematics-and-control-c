@@ -9,6 +9,10 @@
 
 #include "unity.h"
 
+
+void setUp(void);
+void tearDown(void);
+
 UnityState Unity;
 
 void UnityBegin(const char* filename) {
