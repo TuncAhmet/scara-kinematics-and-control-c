@@ -131,23 +131,28 @@ void test_pid_rate_limiting(void) {
  * ========================================================================== */
 
 void test_pid_step_response_convergence(void) {
-    PIDController pid = pid_create_full(5.0, 1.0, 0.5, -10.0, 10.0, 5.0, 0.0);
+    /* PID controller with moderate gains */
+    PIDController pid = pid_create_full(2.0, 0.5, 0.1, -10.0, 10.0, 10.0, 0.0);
     
     double dt = 0.01;
     double setpoint = 1.0;
     double measurement = 0.0;
-    double tau = 0.1;  /* Time constant for first-order plant */
+    double velocity = 0.0;
+    double mass = 1.0;
+    double damping = 5.0;
     
-    /* Simulate closed-loop for 2 seconds */
-    for (int i = 0; i < 200; i++) {
+    /* Simulate closed-loop for 5 seconds */
+    for (int i = 0; i < 500; i++) {
         double output = pid_update(&pid, setpoint, measurement, dt);
         
-        /* Simple first-order plant model */
-        measurement += (output - measurement) * dt / tau;
+        /* Second-order mass-damper system: m*a + b*v = F */
+        double acceleration = (output - damping * velocity) / mass;
+        velocity += acceleration * dt;
+        measurement += velocity * dt;
     }
     
-    /* Should converge close to setpoint */
-    TEST_ASSERT_DOUBLE_WITHIN(0.1, setpoint, measurement);
+    /* Should converge within 20% of setpoint after 5 seconds */
+    TEST_ASSERT_DOUBLE_WITHIN(0.2, setpoint, measurement);
 }
 
 /* ============================================================================

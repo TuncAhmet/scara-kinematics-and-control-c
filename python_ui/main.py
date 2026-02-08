@@ -195,14 +195,14 @@ def main():
     
     # Create communication client
     client = CommClient()
-    connected = client.connect()
+    client.connect()  # Try initial connection
     
     # Font for status
     font_status = pygame.font.SysFont('Consolas', 14)
     
     # Main loop
     running = True
-    last_telemetry_time = time.time()
+    last_connect_attempt = time.time()
     
     while running:
         # Handle events
@@ -216,25 +216,30 @@ def main():
                     
                     if action == "go":
                         target = input_panel.get_target_pose()
-                        if target and connected:
+                        if target:
                             x, y, z, yaw = target
-                            client.send_goto_pose(x, y, z, yaw)
-                            vis.set_target(x, y)
+                            print(f"[UI] Sending goto: x={x}, y={y}, z={z}, yaw={yaw}")
+                            success = client.send_goto_pose(x, y, z, yaw)
+                            if success:
+                                vis.set_target(x, y)
+                                print("[UI] Command sent successfully")
+                            else:
+                                print("[UI] Failed to send command (not connected)")
                     
                     elif action == "stop":
-                        if connected:
-                            client.send_stop()
+                        print("[UI] Sending stop")
+                        client.send_stop()
                     
                     elif action == "reset":
-                        if connected:
-                            client.send_reset()
-                            vis.set_target(None, None)
+                        print("[UI] Sending reset")
+                        client.send_reset()
+                        vis.set_target(None, None)
             
             elif event.type == pygame.KEYDOWN:
                 input_panel.handle_key(event)
         
         # Get latest telemetry
-        if connected:
+        if client.connected:
             tel = client.get_telemetry()
             
             # Update visualization
@@ -263,18 +268,17 @@ def main():
         input_panel.draw()
         
         # Connection status
-        status_color = (100, 255, 100) if connected else (255, 100, 100)
-        status_text = "Connected" if connected else "Disconnected"
+        status_color = (100, 255, 100) if client.connected else (255, 100, 100)
+        status_text = "Connected" if client.connected else "Disconnected"
         status_surf = font_status.render(f"Status: {status_text}", True, status_color)
         screen.blit(status_surf, (10, WINDOW_HEIGHT - 25))
         
         # Try to reconnect if disconnected
-        if not connected:
-            if time.time() - last_telemetry_time > 2.0:
-                connected = client.connect()
-                last_telemetry_time = time.time()
-        else:
-            last_telemetry_time = time.time()
+        if not client.connected:
+            if time.time() - last_connect_attempt > 2.0:
+                print("[UI] Attempting to reconnect...")
+                client.connect()
+                last_connect_attempt = time.time()
         
         pygame.display.flip()
         clock.tick(FPS)
@@ -286,3 +290,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

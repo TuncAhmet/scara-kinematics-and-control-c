@@ -53,7 +53,9 @@ void UnityDefaultTestRun(void (*func)(void), const char* name, int line) {
     printf("Test: %s ... ", name);
     fflush(stdout);
     
+    setUp();     /* Call setUp before each test */
     func();
+    tearDown();  /* Call tearDown after each test */
     
     if (Unity.CurrentTestFailed) {
         printf("FAIL\n");
