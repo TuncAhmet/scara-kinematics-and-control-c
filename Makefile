@@ -10,6 +10,8 @@ INC_DIR = include
 BUILD_DIR = build
 TEST_DIR = tests
 
+EXE = .exe
+
 # Source files
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
@@ -20,7 +22,7 @@ LIB_OBJS = $(filter-out $(MAIN_OBJ),$(OBJS))
 
 # Test files
 TEST_SRCS = $(wildcard $(TEST_DIR)/test_*.c)
-TEST_BINS = $(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)/%,$(TEST_SRCS))
+TEST_BINS = $(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)\\%$(EXE),$(TEST_SRCS))
 
 # Unity test framework
 UNITY_SRC = $(TEST_DIR)/unity/unity.c
@@ -49,7 +51,7 @@ $(UNITY_OBJ): $(UNITY_SRC)
 # Test targets
 test: dirs $(UNITY_OBJ) $(LIB_OBJS) $(TEST_BINS)
 	@echo Running all tests...
-	@for %%t in ($(TEST_BINS)) do %%t
+	@for %%t in ($(TEST_BINS)) do call %%t
 
 $(BUILD_DIR)/test_%: $(TEST_DIR)/test_%.c $(UNITY_OBJ) $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
